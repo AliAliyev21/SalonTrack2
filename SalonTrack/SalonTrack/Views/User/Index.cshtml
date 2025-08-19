@@ -1,0 +1,116 @@
+﻿@model List<SalonTrack.ViewModels.UserListViewModel>
+
+@{
+    ViewData["Title"] = "İstifadəçilər";
+    var status = ViewBag.Status as string ?? "active";
+}
+
+<div class="container py-4">
+    <h2 class="mb-4">👤 İstifadəçilər</h2>
+
+    <a asp-action="Create" class="btn btn-primary mb-3">➕ Yeni İstifadəçi</a>
+
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <label for="startDate" class="form-label">Başlanğıc Tarix</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@ViewBag.StartDate" />
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <label for="endDate" class="form-label">Bitmə Tarix</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@ViewBag.EndDate" />
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <label for="status" class="form-label">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option value="active" selected="@(status == "active")">Aktiv</option>
+                <option value="deactive" selected="@(status == "deactive")">Deaktiv</option>
+                <option value="all" selected="@(status == "all")">Hamısı</option>
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">Filterlə</button>
+        </div>
+    </form>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped shadow align-middle">
+            <thead class="table-dark">
+                <tr>
+                    
+                    <th>İstifadəçi Adı</th>
+                    <th>Rolu</th>
+                    <th>Qeydiyyat Tarixi</th>
+                    <th>Toplam Gəlir</th>
+                    <th>Əməliyyat</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    <tr>
+                       
+                        <td>@user.UserName</td>
+                        <td>@user.Role</td>
+                        <td>@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td>@user.TotalIncome.ToString("0.00") ₼</td>
+                        <td>
+                            <a class="btn btn-warning btn-sm me-1" href="/User/Edit/@user.Id">🛠️</a>
+
+                            @if (!user.IsDeleted)
+                            {
+                                <button class="btn btn-danger btn-sm" onclick="confirmDelete('@user.UserName', '@user.Id')">❌ Sil</button>
+                            }
+                            else
+                            {
+                                <form method="post" asp-action="Activate" asp-route-id="@user.Id" class="d-inline">
+                                    <button class="btn btn-success btn-sm">✔ Aktiv Et</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function confirmDelete(username, id) {
+        Swal.fire({
+            title: `Əminsiniz?`,
+            text: `"${username}" adlı istifadəçi silinəcək!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Bəli, sil',
+            cancelButtonText: 'İmtina'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = '/User/Delete';
+
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = 'id';
+                hiddenField.value = id;
+
+                form.appendChild(hiddenField);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+</script>

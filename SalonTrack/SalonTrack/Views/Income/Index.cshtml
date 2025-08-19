@@ -1,0 +1,161 @@
+﻿@model SalonTrack.ViewModels.IncomeListViewModel
+@{
+    ViewData["Title"] = "Gəlirlər Siyahısı";
+}
+
+<div class="container py-4">
+    <!-- Panel -->
+    <div class="row mb-4 text-center">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="p-3 bg-light shadow rounded">
+                <h6>📆 Bu Gün</h6>
+                <span class="text-success h5">@Model.TodayTotal ₼</span>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="p-3 bg-light shadow rounded">
+                <h6>🗓️ Bu Həftə</h6>
+                <span class="text-success h5">@Model.ThisWeekTotal ₼</span>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="p-3 bg-light shadow rounded">
+                <h6>📆 Bu Ay</h6>
+                <span class="text-success h5">@Model.ThisMonthTotal ₼</span>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="p-3 bg-light shadow rounded">
+                <h6>🗓️ Bu İl</h6>
+                <span class="text-success h5">@Model.ThisYearTotal ₼</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info shadow-sm">
+        <strong>💰 Yekun Gəlir (Net): </strong>
+        <span class="highlight-total">@Model.Total - @Model.TotalExpense ₼</span>
+        <span class="text-muted ms-2">(Gəlir: @Model.Total ₼ - Xərc: @Model.TotalExpense ₼)</span>
+    </div>
+
+    <!-- Filter Form -->
+    <form id="filterForm" asp-action="Index" method="get" class="row mb-4 g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">İstifadəçiyə görə axtar:</label>
+            <input type="text" id="userSearch" class="form-control mb-2" placeholder="Ad ilə axtar..."/>
+
+
+            <select name="userId" class="form-select" id="userDropdown" onchange="this.form.submit()">
+                <option value="">Hamısı</option>
+                @foreach (var user in Model.AllUsers)
+                {
+                    var status = user.IsDeleted ? " (Deaktiv)" : "";
+                    <option value="@user.Id"
+                            data-isdeleted="@user.IsDeleted.ToString().ToLower()"
+                            selected="@(user.Id == Model.SelectedUserId)">
+                        @user.UserName @status
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Başlanğıc Tarix</label>
+            <input type="date" name="startDate" class="form-control"
+                   value="@Model?.StartDate?.ToString("yyyy-MM-dd")"
+                   onchange="this.form.submit()" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Bitmə Tarix</label>
+            <input type="date" name="endDate" class="form-control"
+                   value="@Model?.EndDate?.ToString("yyyy-MM-dd")"
+                   onchange="this.form.submit()" />
+        </div>
+
+        <div class="col-md-3">
+            <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="showDeactivated" name="showDeactivated" value="true"
+                       onchange="this.form.submit()" @(Model.ShowDeactivated ? "checked" : "") />
+                <label class="form-check-label" for="showDeactivated">Deaktivləri göstər</label>
+            </div>
+        </div>
+    </form>
+
+    <!-- Income Table -->
+    <div id="incomeTable">
+        @await Html.PartialAsync("_IncomeTablePartial", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmDelete(incomeId) {
+            Swal.fire({
+                title: 'Əminsiniz?',
+                text: "Bu gəlir məlumatı silinəcək!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Bəli, sil',
+                cancelButtonText: 'İmtina'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/Income/Delete/' + incomeId;
+                }
+            });
+        }
+
+        // Pagination AJAX
+        $(document).on("click", ".page-link", function (e) {
+            e.preventDefault();
+            const url = $(this).attr("href");
+            $.get(url, function (data) {
+                $("#incomeTable").html(data);
+            });
+        });
+
+        // Debounced search logic
+        let debounceTimer;
+
+        function changeSelectedUser() {
+            clearTimeout(debounceTimer);
+
+            debounceTimer = setTimeout(function () {
+                const filter = document.getElementById("userSearch").value.toLowerCase();
+                const dropdown = document.getElementById("userDropdown");
+                let matched = false;
+
+                if (filter.length < 3) return;
+
+                for (let i = 0; i < dropdown.options.length; i++) {
+                    const option = dropdown.options[i];
+                    const text = option.text.toLowerCase();
+
+                    if (text.includes(filter) && !matched) {
+                        option.selected = true;
+                        matched = true;
+                    } else {
+                        option.selected = false;
+                    }
+                }
+
+                if (matched) {
+                    document.getElementById("filterForm").submit();
+                }
+            }, 400);
+        }
+
+        // Attach input event once DOM loaded
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("userSearch");
+            if (searchInput) {
+                searchInput.addEventListener("input", changeSelectedUser);
+            }
+        });
+    </script>
+}
+
+}
